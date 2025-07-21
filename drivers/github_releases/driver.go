@@ -16,7 +16,9 @@ type GithubReleases struct {
 	model.Storage
 	Addition
 
-	points []MountPoint
+	points             []MountPoint
+	RatelimitRemaining int64
+	RatelimitReset     int64
 }
 
 func (d *GithubReleases) Config() driver.Config {

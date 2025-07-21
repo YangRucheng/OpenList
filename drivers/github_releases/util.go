@@ -3,28 +3,45 @@ package github_releases
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/OpenListTeam/OpenList/v4/drivers/base"
+	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/go-resty/resty/v2"
-	log "github.com/sirupsen/logrus"
 )
 
 // 发送 GET 请求
 func (d *GithubReleases) GetRequest(url string) (*resty.Response, error) {
+	// API 接口已耗尽且未到重置时间
+	if d.RatelimitRemaining == 0 && d.RatelimitReset != 0 && time.Now().Unix() < d.RatelimitReset {
+		return nil, fmt.Errorf("GitHub API rate limit exceeded, please try again later")
+	}
+
 	req := base.RestyClient.R()
 	req.SetHeader("Accept", "application/vnd.github+json")
 	req.SetHeader("X-GitHub-Api-Version", "2022-11-28")
+	utils.Log.Debugf("Get request: %s", url)
+
 	if d.Addition.Token != "" {
 		req.SetHeader("Authorization", fmt.Sprintf("Bearer %s", d.Addition.Token))
 	}
 	res, err := req.Get(url)
+
 	if err != nil {
 		return nil, err
 	}
 	if res.StatusCode() != 200 {
-		log.Warn("failed to get request: ", res.StatusCode(), res.String())
+		utils.Log.Warnf("failed to get request: %s, status code: %d, body: %s", url, res.StatusCode(), res.String())
 	}
+
+	// 更新 GitHub API 接口速率限制
+	remaining, _ := strconv.ParseInt(res.Header().Get("X-RateLimit-Remaining"), 10, 64)
+	d.RatelimitRemaining = remaining
+	reset, _ := strconv.ParseInt(res.Header().Get("X-RateLimit-Reset"), 10, 64)
+	d.RatelimitReset = reset
+
 	return res, nil
 }
 
