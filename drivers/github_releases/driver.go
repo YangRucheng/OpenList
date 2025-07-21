@@ -44,7 +44,7 @@ func (d *GithubReleases) List(ctx context.Context, dir model.Obj, args model.Lis
 		point := &d.points[i]
 
 		if !d.Addition.ShowAllVersion { // latest
-			point.RequestRelease(d.GetRequest, args.Refresh)
+			point.RequestLatestRelease(d.GetRequest, args.Refresh)
 
 			if point.Point == path { // 与仓库路径相同
 				files = append(files, point.GetLatestRelease()...)
