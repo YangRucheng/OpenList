@@ -18,29 +18,39 @@ type MountPoint struct {
 }
 
 // 请求最新版本
-func (m *MountPoint) RequestLatestRelease(get func(url string) (*resty.Response, error), refresh bool) {
+func (m *MountPoint) RequestLatestRelease(get func(url string) (*resty.Response, error), refresh bool) error {
 	if m.Repo == "" {
-		return
+		return nil
 	}
 
 	if m.Release == nil || refresh {
-		resp, _ := get("https://api.github.com/repos/" + m.Repo + "/releases/latest")
+		resp, err := get("https://api.github.com/repos/" + m.Repo + "/releases/latest")
+		if err != nil {
+			return err
+		}
+
 		m.Release = new(Release)
 		json.Unmarshal(resp.Body(), m.Release)
 	}
+	return nil
 }
 
 // 请求所有版本
-func (m *MountPoint) RequestReleases(get func(url string) (*resty.Response, error), refresh bool) {
+func (m *MountPoint) RequestReleases(get func(url string) (*resty.Response, error), refresh bool) error {
 	if m.Repo == "" {
-		return
+		return nil
 	}
 
 	if m.Releases == nil || refresh {
-		resp, _ := get("https://api.github.com/repos/" + m.Repo + "/releases")
+		resp, err := get("https://api.github.com/repos/" + m.Repo + "/releases")
+		if err != nil {
+			return err
+		}
+
 		m.Releases = new([]Release)
 		json.Unmarshal(resp.Body(), m.Releases)
 	}
+	return nil
 }
 
 // 获取最新版本
@@ -143,9 +153,12 @@ func (m *MountPoint) GetAllVersionSize() int64 {
 	return size
 }
 
-func (m *MountPoint) GetOtherFile(get func(url string) (*resty.Response, error), refresh bool) []File {
+func (m *MountPoint) GetOtherFile(get func(url string) (*resty.Response, error), refresh bool) ([]File, error) {
 	if m.OtherFile == nil || refresh {
-		resp, _ := get("https://api.github.com/repos/" + m.Repo + "/contents")
+		resp, err := get("https://api.github.com/repos/" + m.Repo + "/contents")
+		if err != nil {
+			return nil, err
+		}
 		m.OtherFile = new([]FileInfo)
 		json.Unmarshal(resp.Body(), m.OtherFile)
 	}
@@ -165,7 +178,7 @@ func (m *MountPoint) GetOtherFile(get func(url string) (*resty.Response, error),
 			})
 		}
 	}
-	return files
+	return files, nil
 }
 
 type File struct {

@@ -22,7 +22,7 @@ func (d *GithubReleases) GetRequest(url string) (*resty.Response, error) {
 	req := base.RestyClient.R()
 	req.SetHeader("Accept", "application/vnd.github+json")
 	req.SetHeader("X-GitHub-Api-Version", "2022-11-28")
-	utils.Log.Debugf("Get request: %s", url)
+	utils.Log.Infof("Get request: %s", url)
 
 	if d.Addition.Token != "" {
 		req.SetHeader("Authorization", fmt.Sprintf("Bearer %s", d.Addition.Token))
@@ -34,6 +34,7 @@ func (d *GithubReleases) GetRequest(url string) (*resty.Response, error) {
 	}
 	if res.StatusCode() != 200 {
 		utils.Log.Warnf("failed to get request: %s, status code: %d, body: %s", url, res.StatusCode(), res.String())
+		return nil, fmt.Errorf("%s", res.String())
 	}
 
 	// 更新 GitHub API 接口速率限制
