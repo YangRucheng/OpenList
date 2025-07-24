@@ -11,6 +11,7 @@ import (
 	"github.com/OpenListTeam/OpenList/v4/internal/model"
 	"github.com/OpenListTeam/OpenList/v4/internal/op"
 	"github.com/OpenListTeam/OpenList/v4/pkg/generic"
+	"github.com/OpenListTeam/OpenList/v4/pkg/utils"
 	"github.com/OpenListTeam/OpenList/v4/server/common"
 	"github.com/gin-gonic/gin"
 	"github.com/pkg/errors"
@@ -124,7 +125,7 @@ func FsRecursiveMove(c *gin.Context) {
 	var count = 0
 	for i, fileName := range movingFileNames {
 		// move
-		err := fs.Move(c.Request.Context(), fileName, dstDir, len(movingFileNames) > i+1)
+		_, err := fs.Move(c.Request.Context(), fileName, dstDir, len(movingFileNames) > i+1)
 		if err != nil {
 			common.ErrorResp(c, err, 500)
 			return
@@ -172,6 +173,11 @@ func FsBatchRename(c *gin.Context) {
 	for _, renameObject := range req.RenameObjects {
 		if renameObject.SrcName == "" || renameObject.NewName == "" {
 			continue
+		}
+		renameObject.NewName, err = utils.CheckRelativePath(renameObject.NewName)
+		if err != nil {
+			common.ErrorResp(c, err, 403)
+			return
 		}
 		filePath := fmt.Sprintf("%s/%s", reqPath, renameObject.SrcName)
 		if err := fs.Rename(c.Request.Context(), filePath, renameObject.NewName); err != nil {
@@ -228,10 +234,13 @@ func FsRegexRename(c *gin.Context) {
 	}
 
 	for _, file := range files {
-
 		if srcRegexp.MatchString(file.GetName()) {
+			newFileName, err := utils.CheckRelativePath(srcRegexp.ReplaceAllString(file.GetName(), req.NewNameRegex))
+			if err != nil {
+				common.ErrorResp(c, err, 403)
+				return
+			}
 			filePath := fmt.Sprintf("%s/%s", reqPath, file.GetName())
-			newFileName := srcRegexp.ReplaceAllString(file.GetName(), req.NewNameRegex)
 			if err := fs.Rename(c.Request.Context(), filePath, newFileName); err != nil {
 				common.ErrorResp(c, err, 500)
 				return

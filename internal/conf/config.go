@@ -3,7 +3,6 @@ package conf
 import (
 	"path/filepath"
 
-	"github.com/OpenListTeam/OpenList/v4/cmd/flags"
 	"github.com/OpenListTeam/OpenList/v4/pkg/utils/random"
 )
 
@@ -45,6 +44,32 @@ type LogConfig struct {
 	MaxBackups int    `json:"max_backups" env:"MAX_BACKUPS"`
 	MaxAge     int    `json:"max_age" env:"MAX_AGE"`
 	Compress   bool   `json:"compress" env:"COMPRESS"`
+	Filter     LogFilterConfig `json:"filter"` // Log filtering configuration (config file only, no env support)
+}
+
+// LogFilterConfig holds configuration for log filtering
+// Note: This configuration is only supported via config file, not environment variables
+type LogFilterConfig struct {
+	// EnableFiltering controls whether log filtering is enabled
+	EnableFiltering bool `json:"enable_filtering"`
+	
+	// FilterHealthChecks controls whether to filter health check requests
+	FilterHealthChecks bool `json:"filter_health_checks"`
+	
+	// FilterWebDAV controls whether to filter WebDAV requests (only for HTTP server)
+	FilterWebDAV bool `json:"filter_webdav"`
+	
+	// FilterHEADRequests controls whether to filter HEAD requests
+	FilterHEADRequests bool `json:"filter_head_requests"`
+	
+	// CustomSkipPaths allows adding custom paths to skip
+	CustomSkipPaths []string `json:"custom_skip_paths"`
+	
+	// CustomSkipMethods allows adding custom methods to skip
+	CustomSkipMethods []string `json:"custom_skip_methods"`
+	
+	// CustomSkipPrefixes allows adding custom path prefixes to skip
+	CustomSkipPrefixes []string `json:"custom_skip_prefixes"`
 }
 
 type TaskConfig struct {
@@ -119,11 +144,11 @@ type Config struct {
 	LastLaunchedVersion   string      `json:"last_launched_version"`
 }
 
-func DefaultConfig() *Config {
-	tempDir := filepath.Join(flags.DataDir, "temp")
-	indexDir := filepath.Join(flags.DataDir, "bleve")
-	logPath := filepath.Join(flags.DataDir, "log/log.log")
-	dbPath := filepath.Join(flags.DataDir, "data.db")
+func DefaultConfig(dataDir string) *Config {
+	tempDir := filepath.Join(dataDir, "temp")
+	indexDir := filepath.Join(dataDir, "bleve")
+	logPath := filepath.Join(dataDir, "log/log.log")
+	dbPath := filepath.Join(dataDir, "data.db")
 	return &Config{
 		Scheme: Scheme{
 			Address:    "0.0.0.0",
@@ -153,6 +178,15 @@ func DefaultConfig() *Config {
 			MaxSize:    50,
 			MaxBackups: 30,
 			MaxAge:     28,
+			Filter: LogFilterConfig{
+				EnableFiltering:    true,
+				FilterHealthChecks: true,
+				FilterWebDAV:       true,
+				FilterHEADRequests: true,
+				CustomSkipPaths:    []string{},
+				CustomSkipMethods:  []string{},
+				CustomSkipPrefixes: []string{},
+			},
 		},
 		MaxConnections:        0,
 		MaxConcurrency:        64,
