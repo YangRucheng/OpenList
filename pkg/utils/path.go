@@ -75,22 +75,47 @@ func EncodePath(path string, all ...bool) string {
 }
 
 func JoinBasePath(basePath, reqPath string) (string, error) {
-	reqPath, err := CheckRelativePath(reqPath)
-	if err != nil {
-		return "", err
+	isRelativePath := strings.Contains(reqPath, "..")
+	reqPath = FixAndCleanPath(reqPath)
+	if isRelativePath && !strings.Contains(reqPath, "..") {
+		return "", errs.RelativePath
 	}
 	return stdpath.Join(FixAndCleanPath(basePath), reqPath), nil
 }
 
-func CheckRelativePath(path string) (string, error) {
-	isRelativePath := strings.Contains(path, "..")
-	path = FixAndCleanPath(path)
-	if isRelativePath && !strings.Contains(path, "..") {
-		return "", errs.RelativePath
-	}
-	return path, nil
-}
-
 func GetFullPath(mountPath, path string) string {
 	return stdpath.Join(GetActualMountPath(mountPath), path)
+}
+
+// GetPathHierarchy generates a hierarchy of paths from the given path.
+//
+// Example:
+//  1. "/" => {"/"}
+//  2. "" => {"/"}
+//  3. "/a/b/c" => {"/", "/a", "/a/b", "/a/b/c"}
+//  4. "/a/b/c/d/e.txt" => {"/", "/a", "/a/b", "/a/b/c", "/a/b/c/d", "/a/b/c/d/e.txt"}
+//  5. "./a/b///c" => {"/", "/a", "/a/b", "/a/b/c"}
+func GetPathHierarchy(path string) []string {
+	if path == "" || path == "/" {
+		return []string{"/"}
+	}
+
+	path = FixAndCleanPath(path)
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
+	hierarchy := []string{"/"}
+
+	parts := strings.Split(path, "/")
+	currentPath := ""
+	for _, part := range parts {
+		if part == "" {
+			continue
+		}
+		currentPath += "/" + part
+		hierarchy = append(hierarchy, currentPath)
+	}
+
+	return hierarchy
 }
